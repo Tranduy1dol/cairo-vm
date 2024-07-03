@@ -324,8 +324,8 @@ pub(super) mod serde_impl {
 
     use super::CAIRO_PIE_VERSION;
     use super::{CairoPieMemory, SegmentInfo};
-    #[cfg(any(target_arch = "wasm32", no_std, not(feature = "std")))]
-    use crate::alloc::string::ToString;
+    // #[cfg(any(target_arch = "wasm32", no_std, not(feature = "std")))]
+    // use crate::alloc::string::ToString;
     use crate::stdlib::prelude::{String, Vec};
     use crate::{
         types::relocatable::{MaybeRelocatable, Relocatable},
