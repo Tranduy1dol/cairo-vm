@@ -8,6 +8,7 @@ use super::{
     field_arithmetic::{u256_get_square_root, u384_get_square_root, uint384_div},
     mod_circuit::{run_p_mod_circuit, run_p_mod_circuit_with_large_batch_size},
     secp::{
+        self,
         ec_utils::{
             compute_doubling_slope_external_consts, compute_slope_and_assing_secp_p,
             ec_double_assign_new_y, ec_mul_inner, ec_negate_embedded_secp_p,
@@ -873,6 +874,48 @@ impl HintProcessorLogic for BuiltinHintProcessor {
                 &hint_data.ap_tracking,
                 constants,
                 exec_scopes,
+            ),
+            secp::hints::CALCULATE_VALUE => secp::hints::calculate_value(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
+            ),
+            secp::hints::COMPUTE_IDS_HIGH_LOW => secp::hints::compute_ids_high_low(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
+            ),
+            secp::hints::COMPUTE_Q_MOD_PRIME => secp::hints::compute_q_mod_prime(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
+            ),
+            secp::hints::IS_ON_CURVE_2 => secp::hints::is_on_curve_2(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
+            ),
+            secp::hints::MAYBE_WRITE_ADDRESS_TO_AP => secp::hints::maybe_write_address_to_ap(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
+            ),
+            secp::hints::PACK_X_PRIME => secp::hints::pack_x_prime(
+                vm,
+                exec_scopes,
+                &hint_data.ids_data,
+                &hint_data.ap_tracking,
+                constants,
             ),
             code => Err(HintError::UnknownHint(code.to_string().into_boxed_str())),
         }

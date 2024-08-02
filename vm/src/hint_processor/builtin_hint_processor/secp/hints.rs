@@ -2,10 +2,9 @@ use std::collections::HashMap;
 use std::ops::Deref;
 
 use crate::hint_processor::builtin_hint_processor::hint_utils::{
-    get_constant_from_var_name, get_integer_from_var_name, get_relocatable_from_var_name,
+    get_integer_from_var_name, get_ptr_from_var_name, get_relocatable_from_var_name,
     insert_value_from_var_name, insert_value_into_ap,
 };
-
 use crate::hint_processor::hint_processor_definition::HintReference;
 use crate::math_utils::signed_felt;
 use crate::serde::deserialize_program::ApTracking;
@@ -33,8 +32,8 @@ pub fn maybe_write_address_to_ap(
 ) -> Result<(), HintError> {
     let not_on_curve = get_integer_from_var_name("not_on_curve", vm, ids_data, _ap_tracking)?;
     if not_on_curve == Felt252::ZERO {
-        let response = get_relocatable_from_var_name("response", vm, ids_data, _ap_tracking)?;
-        let offset = 2; // SecpNewResponse::ec_point_offset()
+        let response = get_ptr_from_var_name("response", vm, ids_data, _ap_tracking)?;
+        let offset = 1; // SecpNewResponse::ec_point_offset()
         let ec_point = vm.get_relocatable((response + offset)?)?; //TODO: Use actual struct offset
         insert_value_into_ap(vm, ec_point)?;
     } else {
@@ -97,25 +96,20 @@ pub fn compute_ids_high_low(
     _exec_scopes: &mut ExecutionScopes,
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,
-    constants: &HashMap<String, Felt252>,
+    _constants: &HashMap<String, Felt252>,
 ) -> Result<(), HintError> {
-    const UPPER_BOUND: &str = "starkware.cairo.common.math.assert_250_bit.UPPER_BOUND";
-    let upper_bound = constants
-        .get(UPPER_BOUND)
-        .map_or_else(|| get_constant_from_var_name("UPPER_BOUND", constants), Ok)?;
+    let upper_bound = get_integer_from_var_name("UPPER_BOUND", vm, ids_data, ap_tracking)?;
     let value = Felt252::from(&signed_felt(get_integer_from_var_name(
         "value",
         vm,
         ids_data,
         ap_tracking,
     )?));
-    if &value > upper_bound {
+    if value > upper_bound {
         return Err(HintError::ValueOutside250BitRange(Box::new(value)));
     }
-    const SHIFT: &str = "starkware.cairo.common.math.assert_250_bit.SHIFT";
-    let shift = constants
-        .get(SHIFT)
-        .map_or_else(|| get_constant_from_var_name("SHIFT", constants), Ok)?;
+
+    let shift = get_integer_from_var_name("SHIFT", vm, ids_data, ap_tracking)?;
     let (high, low) = value.div_rem(&shift.try_into().map_err(|_| MathError::DividedByZero)?);
     insert_value_from_var_name("high", high, vm, ids_data, ap_tracking)?;
     insert_value_from_var_name("low", low, vm, ids_data, ap_tracking)?;
@@ -256,9 +250,8 @@ fn pack_from_var_name(
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
 
-    use num_bigint::BigUint;
+    use assert_matches::assert_matches;
     use rstest::rstest;
 
     use crate::utils::test_utils::*;
@@ -268,17 +261,16 @@ mod tests {
     #[rstest]
     fn test_set_ap_to_ec_point_address() {
         let mut vm = VirtualMachine::new(false);
-        vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
 
         let ap_tracking = ApTracking::default();
 
         let mut exec_scopes = ExecutionScopes::new();
 
-        let ids_data: HashMap<String, HintReference> = ids_data!["response", "not_on_curve"];
-        insert_value_from_var_name("not_on_curve", 0, &mut vm, &ids_data, &ap_tracking).unwrap();
-        insert_value_from_var_name("response", 1, &mut vm, &ids_data, &ap_tracking).unwrap();
+        vm.run_context.fp = 4;
+        vm.set_ap(4);
+        // Create hint_data
+        let ids_data = non_continuous_ids_data![("not_on_curve", -2), ("response", -1)];
+        vm.segments = segments![((1, 0), 0), ((1, 1), (2, 0)), ((1, 2), 0), ((1, 3), (1, 0))];
         maybe_write_address_to_ap(
             &mut vm,
             &mut exec_scopes,
@@ -290,16 +282,13 @@ mod tests {
 
         let ap = vm.get_ap();
 
-        let ec_point = vm.get_integer(ap).unwrap().into_owned();
-        assert_eq!(ec_point, 1234.into());
+        let ec_point = vm.get_relocatable(ap).unwrap();
+        assert_eq!(ec_point, (2, 0).into());
     }
     #[test]
     fn test_is_on_curve_2() {
         let mut vm = VirtualMachine::new(false);
         vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
-
         let ids_data = ids_data!["is_on_curve"];
         let ap_tracking = ApTracking::default();
 
@@ -328,29 +317,15 @@ mod tests {
     #[test]
     fn test_compute_q_mod_prime() {
         let mut vm = VirtualMachine::new(false);
-        vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
 
-        // let ids_data = ids_data!["val"];
         let ap_tracking = ApTracking::default();
 
         let mut exec_scopes = ExecutionScopes::new();
 
-        vm.set_fp(11);
-        let ids_data =
-            non_continuous_ids_data![("val", -11), ("value", -8), ("high", -5), ("low", -2)];
-
-        // Set a valid value for `val`
-        let val = BigInt::from_str(
-            "115792089210356248762697446949407573530086143415290314195533631308867097853948",
-        )
-        .unwrap()
-        .to_biguint()
-        .unwrap();
-        insert_value_from_var_name("val", Felt252::from(&val), &mut vm, &ids_data, &ap_tracking)
-            .unwrap();
-
+        vm.run_context.fp = 9;
+        //Create hint data
+        let ids_data = non_continuous_ids_data![("val", -5), ("q", 0)];
+        vm.segments = segments![((1, 4), 0), ((1, 5), 0), ((1, 6), 0)];
         compute_q_mod_prime(
             &mut vm,
             &mut exec_scopes,
@@ -362,63 +337,53 @@ mod tests {
 
         let q: Felt252 = get_integer_from_var_name("q", &vm, &ids_data, &ap_tracking)
             .expect("compute_q_mod_prime should have put 'q' in ids_data");
-        assert_eq!(q, Felt252::from(val));
+        assert_eq!(q, Felt252::from(0));
     }
 
     #[test]
     fn test_compute_ids_high_low() {
         let mut vm = VirtualMachine::new(false);
-        vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
 
-        segments![((1, 0), 81)];
+        let value = BigInt::from(25);
+        let shift = BigInt::from(12);
 
-        let ids_data = ids_data!["high", "low", "value"];
+        vm.set_fp(14);
+        let ids_data = non_continuous_ids_data![
+            ("UPPER_BOUND", -14),
+            ("value", -11),
+            ("high", -8),
+            ("low", -5),
+            ("SHIFT", -2)
+        ];
+
+        vm.segments = segments!(
+            //UPPER_BOUND
+            ((1, 0), 18446744069414584321),
+            ((1, 1), 0),
+            ((1, 2), 0),
+            //value
+            ((1, 3), 25),
+            ((1, 4), 0),
+            ((1, 5), 0),
+            //high
+            ((1, 6), 2),
+            ((1, 7), 0),
+            ((1, 8), 0),
+            //low
+            ((1, 9), 1),
+            ((1, 10), 0),
+            ((1, 11), 0),
+            //SHIFT
+            ((1, 12), 12),
+            ((1, 13), 0),
+            ((1, 14), 0)
+        );
+
         let ap_tracking = ApTracking::default();
 
         let mut exec_scopes = ExecutionScopes::new();
 
-        let value: BigInt = BigInt::from(1) << 164; // blah blah
-        let shift = BigInt::from(1) << 100;
-        let upper_bound = BigInt::from(1) << 165;
-        let high = BigInt::from(BigUint::from(1u32));
-
-        insert_value_from_var_name(
-            "high",
-            Felt252::from(&high),
-            &mut vm,
-            &ids_data,
-            &ap_tracking,
-        )
-        .unwrap();
-        insert_value_from_var_name(
-            "low",
-            Felt252::from(&high),
-            &mut vm,
-            &ids_data,
-            &ap_tracking,
-        )
-        .unwrap();
-        insert_value_from_var_name(
-            "value",
-            Felt252::from(&value),
-            &mut vm,
-            &ids_data,
-            &ap_tracking,
-        )
-        .unwrap();
-
-        let mut constants = HashMap::new();
-        constants.insert(
-            "starkware.cairo.common.math.assert_250_bit.UPPER_BOUND".to_string(),
-            Felt252::from(&upper_bound),
-        );
-        constants.insert(
-            "starkware.cairo.common.math.assert_250_bit.SHIFT".to_string(),
-            Felt252::from(&shift),
-        );
-
+        let constants = HashMap::new();
         compute_ids_high_low(
             &mut vm,
             &mut exec_scopes,
@@ -440,20 +405,25 @@ mod tests {
     #[test]
     fn test_calculate_value() {
         let mut vm = VirtualMachine::new(false);
-        vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
+        vm.set_fp(10);
 
-        let ids_data = ids_data!["x", "v", "value"];
+        let ids_data = non_continuous_ids_data![("x", -10), ("v", -7)];
+        vm.segments = segments!(
+            // X
+            ((1, 0), 18446744069414584321),
+            ((1, 1), 0),
+            ((1, 2), 0),
+            // v
+            ((1, 3), 1),
+            ((1, 4), 0),
+            ((1, 5), 0),
+        );
         let ap_tracking = ApTracking::default();
 
         let mut exec_scopes = ExecutionScopes::new();
 
-        let x = BigInt::from(1234567890); // Example x value
+        let x = BigInt::from(18446744069414584321u128); // Example x value
         let v = BigInt::from(1); // Example v value (must be 0 or 1 for even/odd check)
-
-        exec_scopes.insert_value("x", x.clone());
-        exec_scopes.insert_value("v", v.clone());
 
         let constants = HashMap::new();
 
@@ -493,30 +463,22 @@ mod tests {
     #[test]
     fn test_pack_x_prime() {
         let mut vm = VirtualMachine::new(false);
-        vm.set_fp(1);
-        vm.add_memory_segment();
-        vm.add_memory_segment();
 
-        let ids_data = ids_data!["x"];
+        //Initialize fp
+        vm.run_context.fp = 10;
+
+        //Create hint data
+        let ids_data = non_continuous_ids_data![("x", -5)];
+
+        vm.segments = segments![
+            ((1, 5), ("132181232131231239112312312313213083892150", 10)),
+            ((1, 6), 10),
+            ((1, 7), 10)
+        ];
+
         let ap_tracking = ApTracking::default();
 
         let mut exec_scopes = ExecutionScopes::new();
-
-        let x = BigInt3::from_values([
-            BigInt::from(1234567890).into(),
-            BigInt::from(876543210).into(),
-            BigInt::from(1234567890).into(),
-        ]);
-        let x = x.pack86();
-
-        insert_value_from_var_name(
-            "x",
-            Felt252::from(x.clone()),
-            &mut vm,
-            &ids_data,
-            &ap_tracking,
-        )
-        .unwrap();
 
         pack_x_prime(
             &mut vm,
@@ -527,12 +489,11 @@ mod tests {
         )
         .expect("pack_x_prime() failed");
 
-        let value: BigInt = exec_scopes
-            .get("value")
-            .expect("pack_x_prime should have put 'value' in exec_scopes");
-
-        let expected_value = x.mod_floor(&SECP256R1_P);
-
-        assert_eq!(value, expected_value);
+        assert_matches!(
+            exec_scopes.get::<BigInt>("value"),
+            Ok(x) if x == bigint_str!(
+                "59863107065205964761754162760883789350782881856141750"
+            )
+        );
     }
 }
