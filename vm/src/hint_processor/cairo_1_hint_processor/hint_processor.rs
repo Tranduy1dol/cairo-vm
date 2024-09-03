@@ -88,6 +88,9 @@ impl Cairo1HintProcessor {
             Hint::Core(CoreHintBase::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst })) => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+            Hint::Core(CoreHintBase::Core(CoreHint::TestLessThanOrEqualAddress { lhs, rhs, dst })) => {
+                self.test_less_than_or_equal(vm, lhs, rhs, dst)
+            }
             Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::Felt252DictRead {
                 dict_ptr,
                 key,
