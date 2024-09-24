@@ -242,7 +242,7 @@ impl CairoPie {
         Ok(())
     }
 
-    fn run_memory_validity_checks(&self) -> Result<(), CairoPieValidationError> {
+    pub fn run_memory_validity_checks(&self) -> Result<(), CairoPieValidationError> {
         let mut segment_sizes = vec![
             &self.metadata.program_segment,
             &self.metadata.execution_segment,
