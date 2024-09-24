@@ -267,6 +267,7 @@ impl CairoPie {
         for ((si, so), _) in self.memory.0.iter() {
             validate_addr((*si as isize, *so).into())?;
         }
+        assert!(false);
         Ok(())
     }
 
