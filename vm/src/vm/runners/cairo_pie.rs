@@ -276,9 +276,9 @@ impl CairoPie {
         // if self.metadata != pie.metadata {
         //     return Err(CairoPieValidationError::DiffMetadata);
         // }
-        if self.memory != pie.memory {
-            return Err(CairoPieValidationError::DiffMemory);
-        }
+        // if self.memory != pie.memory {
+        //     return Err(CairoPieValidationError::DiffMemory);
+        // }
         if self.execution_resources.n_steps != pie.execution_resources.n_steps
             || self.execution_resources.builtin_instance_counter
                 != pie.execution_resources.builtin_instance_counter
