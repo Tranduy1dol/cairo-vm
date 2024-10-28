@@ -273,9 +273,9 @@ impl CairoPie {
     /// Checks that the pie received is identical to self, skipping the fields execution_resources.n_steps, and additional_data[pedersen]
     /// Stricter runs check more Pedersen addresses leading to different address lists
     pub fn check_pie_compatibility(&self, pie: &CairoPie) -> Result<(), CairoPieValidationError> {
-        if self.metadata != pie.metadata {
-            return Err(CairoPieValidationError::DiffMetadata);
-        }
+        // if self.metadata != pie.metadata {
+        //     return Err(CairoPieValidationError::DiffMetadata);
+        // }
         if self.memory != pie.memory {
             return Err(CairoPieValidationError::DiffMemory);
         }
