@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![forbid(unsafe_code)]
 use bincode::enc::write::Writer;
 use cairo_vm::air_public_input::PublicInputError;

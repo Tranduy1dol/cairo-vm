@@ -916,6 +916,7 @@ dependencies = [
  "iai-callgrind",
  "keccak",
  "lazy_static",
+ "log",
  "mimalloc",
  "nom",
  "num-bigint",
