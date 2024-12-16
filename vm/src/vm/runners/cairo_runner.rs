@@ -257,13 +257,10 @@ impl CairoRunner {
             BuiltinName::ec_op,
             BuiltinName::keccak,
             BuiltinName::poseidon,
-            BuiltinName::range_check96,
-            BuiltinName::add_mod,
-            BuiltinName::mul_mod,
         ];
-        if !is_subsequence(&self.program.builtins, &builtin_ordered_list) {
-            return Err(RunnerError::DisorderedBuiltins);
-        };
+        // if !is_subsequence(&self.program.builtins, &builtin_ordered_list) {
+        //     return Err(RunnerError::DisorderedBuiltins);
+        // };
         let mut program_builtins: HashSet<&BuiltinName> = self.program.builtins.iter().collect();
 
         if self.layout.builtins.output {
@@ -342,31 +339,6 @@ impl CairoRunner {
             }
         }
 
-        if let Some(instance_def) = self.layout.builtins.range_check96.as_ref() {
-            let included = program_builtins.remove(&BuiltinName::range_check96);
-            if included || self.is_proof_mode() {
-                self.vm.builtin_runners.push(
-                    RangeCheckBuiltinRunner::<RC_N_PARTS_96>::new(instance_def.ratio, included)
-                        .into(),
-                );
-            }
-        }
-        if let Some(instance_def) = self.layout.builtins.add_mod.as_ref() {
-            let included = program_builtins.remove(&BuiltinName::add_mod);
-            if included || self.is_proof_mode() {
-                self.vm
-                    .builtin_runners
-                    .push(ModBuiltinRunner::new_add_mod(instance_def, included).into());
-            }
-        }
-        if let Some(instance_def) = self.layout.builtins.mul_mod.as_ref() {
-            let included = program_builtins.remove(&BuiltinName::mul_mod);
-            if included || self.is_proof_mode() {
-                self.vm
-                    .builtin_runners
-                    .push(ModBuiltinRunner::new_mul_mod(instance_def, included).into());
-            }
-        }
         if !program_builtins.is_empty() && !allow_missing_builtins {
             return Err(RunnerError::NoBuiltinForInstance(Box::new((
                 program_builtins.iter().map(|n| **n).collect(),
