@@ -6,6 +6,7 @@
 //! To generate a [`Program`] from a JSON string, see [`Program::from_bytes()`].
 //! To do the same from a JSON file, see [`Program::from_file()`].
 
+use std::str::FromStr;
 use crate::{
     stdlib::{
         collections::{BTreeMap, HashMap},
@@ -69,6 +70,25 @@ impl BuiltinName {
             BuiltinName::ec_op => EC_OP_BUILTIN_NAME,
             BuiltinName::poseidon => POSEIDON_BUILTIN_NAME,
             BuiltinName::segment_arena => SEGMENT_ARENA_BUILTIN_NAME,
+        }
+    }
+}
+
+impl FromStr for BuiltinName {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            OUTPUT_BUILTIN_NAME => Ok(BuiltinName::output),
+            HASH_BUILTIN_NAME => Ok(BuiltinName::pedersen),
+            RANGE_CHECK_BUILTIN_NAME => Ok(BuiltinName::range_check),
+            SIGNATURE_BUILTIN_NAME => Ok(BuiltinName::ecdsa),
+            BITWISE_BUILTIN_NAME => Ok(BuiltinName::bitwise),
+            EC_OP_BUILTIN_NAME => Ok(BuiltinName::ec_op),
+            KECCAK_BUILTIN_NAME => Ok(BuiltinName::keccak),
+            POSEIDON_BUILTIN_NAME => Ok(BuiltinName::poseidon),
+            SEGMENT_ARENA_BUILTIN_NAME => Ok(BuiltinName::segment_arena),
+            _ => panic!("unexpected builtin")
         }
     }
 }
@@ -1629,7 +1649,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../cairo_programs/manually_compiled/program_without_attributes.json",
         ));
-        _ = deserialize_and_parse_program(program, None).expect("should be able to read file");
+        let _ = deserialize_and_parse_program(program, None).expect("should be able to read file");
     }
 
     #[test]
@@ -1639,6 +1659,6 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../cairo_programs/manually_compiled/program_without_attributes_2.json",
         ));
-        _ = deserialize_and_parse_program(program, None).expect("should be able to read file");
+        let _ = deserialize_and_parse_program(program, None).expect("should be able to read file");
     }
 }

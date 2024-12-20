@@ -49,7 +49,7 @@ use cairo_vm::{
 use itertools::{chain, Itertools};
 use num_traits::{cast::ToPrimitive, Zero};
 use std::{collections::HashMap, iter::Peekable};
-
+use cairo_lang_sierra_to_casm::compiler::SierraToCasmConfig;
 use crate::{Error, FuncArg};
 
 #[derive(Debug)]
@@ -101,8 +101,12 @@ pub fn cairo_run_program(
     let sierra_program_registry = ProgramRegistry::<CoreType, CoreLibfunc>::new(sierra_program)?;
     let type_sizes =
         get_type_size_map(sierra_program, &sierra_program_registry).unwrap_or_default();
+    let config = SierraToCasmConfig {
+        gas_usage_check: false,
+        max_bytecode_size: usize::MAX,
+    };
     let casm_program =
-        cairo_lang_sierra_to_casm::compiler::compile(sierra_program, &metadata, true)?;
+        cairo_lang_sierra_to_casm::compiler::compile(sierra_program, &metadata, config)?;
 
     let main_func = find_function(sierra_program, "::main")?;
 

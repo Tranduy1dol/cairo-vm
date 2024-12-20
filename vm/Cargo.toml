@@ -21,7 +21,7 @@ std = [
     "dep:zip",
 ]
 cairo-1-hints = [
-    "dep:cairo-lang-starknet",
+    "dep:cairo-lang-starknet-classes",
     "dep:cairo-lang-casm",
     "dep:ark-ff",
     "dep:ark-std",
@@ -62,14 +62,14 @@ keccak = { workspace = true }
 hashbrown = { workspace = true }
 anyhow = { workspace = true }
 thiserror-no-std = { workspace = true }
-starknet-types-core = { version = "0.0.9", default-features = false, features = ["serde", "curve", "num-traits"] }
+starknet-types-core = { version = "0.1.5", default-features = false, features = ["serde", "curve", "num-traits"] }
 
 # only for std
 num-prime = { version = "0.4.3", features = ["big-int"], optional = true }
 bitvec = { workspace = true }
 
 # Dependencies for cairo-1-hints feature
-cairo-lang-starknet = { workspace = true, optional = true }
+cairo-lang-starknet-classes = { workspace = true, optional = true }
 cairo-lang-casm = { workspace = true, optional = true }
 
 # TODO: check these dependencies for wasm compatibility
